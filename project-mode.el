@@ -66,7 +66,7 @@
     ("\C-c\C-fr" . project-im-feeling-lucky-regex)
     ("\C-c\C-n" . project-search-text-next)
     ("\C-c\C-p" . project-search-text-previous)
-    ("\C-c\C-m" . project-open-file-for-match-selection)
+    ("\C-c\C-m" . project-open-match-on-line)
     ("\C-c\C-o" . project-open-file-on-line))
   :group 'project)
 
@@ -203,6 +203,13 @@ DAdd a search directory to project: ")
           (find-file file)
           (when p
             (goto-char (string-to-number p))))))))
+
+(defun project-open-match-on-line nil
+  (interactive)
+  (beginning-of-line)
+  (push-mark (point) t t)
+  (end-of-line)
+  (project-open-file-for-match-selection))
 
 (defun project-open-file-on-line nil
   (interactive)
