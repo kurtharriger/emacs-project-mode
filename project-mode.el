@@ -155,21 +155,18 @@ DAdd a search directory to project: ")
   (interactive "MFull-text REGEX: ")
   (project-ensure-current)
   (let ((matches nil))
-    (let ((path-cache (project-path-cache-get (project-current))))
-      (while (car path-cache)
-        (project-run-regex-on-file (car path-cache) regex
-                                   (lambda (p)
-                                     (setq matches
-                                           (append matches (list (list (car path-cache)) p)))))
-        (setq path-cache (cdr path-cache))))
+    (dolist (path (project-path-cache-get (project-current)))
+      (project-run-regex-on-file path regex
+                                 (lambda (p)
+                                   (setq matches
+                                         (append matches (list (list path p)))))))
     (when matches
-      (let ((buf (generate-new-buffer (concat "*" (project-current-name) "-full-text-search-results*"))))
+      (let ((buf (generate-new-buffer (concat "*" (project-current-name) "-regex-full-text-search-results*"))))
         (project-full-text-search-results-buffer-set (project-current) buf)
         (pop-to-buffer buf)
-        (while (car matches)
-          (insert (concat "\n" (first (car matches))
-                          ":" (number-to-string (second (car matches)))))
-          (setq matches (cdr matches)))
+        (dolist (match matches)
+          (insert (concat "\n" (first match)
+                          ":" (number-to-string (second match)))))
         (beginning-of-buffer)))))
 
 (defun project-search-text-next nil
@@ -223,10 +220,9 @@ DAdd a search directory to project: ")
         (buf (generate-new-buffer (concat "*" (project-current-name)
                                           "-path-cache-dump*"))))
     (pop-to-buffer buf)
-    (while (car cache)
+    (dolist (item cache)
       (goto-char (point-max))
-      (insert (concat "\n" (car cache)))
-      (setq cache (cdr cache)))))
+      (insert (concat "\n" item)))))
 
 (defun project-path-cache-refresh nil
   (interactive)
@@ -241,7 +237,8 @@ DAdd a search directory to project: ")
                       (project-tags-file (project-current))
                       nil
                       (project-tags-form-get (project-current)))
-  (visit-tags-table (project-tags-file (project-current))))
+  (when (file-exists-p (project-tags-file (project-current)))
+    (visit-tags-table (project-tags-file (project-current)))))
 
 (defun project-refresh nil
   (interactive)
@@ -295,22 +292,20 @@ DAdd a search directory to project: ")
 (defun project-generate-tags-for-file-with-elisp (file regexes)
   "Generates a list of tag file entry lines for one file for the given regexes."
   (let (ret-val)
-    (when (file-readable-p file)
-      (with-temp-buffer
-        (insert-file-contents file)
-        (let (entries)
-          (while (car regexes)
-            (goto-char (point-min))
-            (while (re-search-forward (car regexes) nil t)
-              (let (byte-offset line match)
-                (setq match (match-string 0))
-                (setq byte-offset (- (point) (length match)))
-                (setq line (line-number-at-pos))
-                (setq entries (append entries (list (concat match ""
-                                                            (number-to-string line) ","
-                                                            (number-to-string byte-offset)))))))
-            (setq regexes (cdr regexes)))
-          entries)))))
+    (with-temp-buffer
+      (insert-file-contents file)
+      (let (entries)
+        (dolist (regex regexes)
+          (goto-char (point-min))
+          (while (re-search-forward regex nil t)
+            (let (byte-offset line match)
+              (setq match (match-string 0))
+              (setq byte-offset (- (point) (length match)))
+              (setq line (line-number-at-pos))
+              (setq entries (append entries (list (concat match ""
+                                                          (number-to-string line) ","
+                                                          (number-to-string byte-offset))))))))
+        entries))))
 
 (defun project-write-tags-for-file-with-etags (input-file tags-file append-p &optional regex-args)
   (let ((cmd-string (combine-and-quote-strings (list ("etags" (when append-p "-a")
@@ -367,15 +362,14 @@ DAdd a search directory to project: ")
       (project-path-cache-create project))))
 
 (defun project-run-regex-on-file (file regex match-handler)
-  (when (file-readable-p file)
-    (with-temp-buffer
-      (insert-file-contents file)
-      (goto-char (point-min))
-      (let ((p nil))
-        (while (condition-case nil
-                   (setq p (re-search-forward regex))
-                 (error nil))
-          (funcall match-handler p))))))
+  (with-temp-buffer
+    (insert-file-contents file)
+    (goto-char (point-min))
+    (let ((p nil))
+      (while (condition-case nil
+                 (setq p (re-search-forward regex))
+               (error nil))
+        (funcall match-handler p)))))
 
 (defun project-find (project)
   "If project found return it, else nil.
@@ -397,10 +391,13 @@ DAdd a search directory to project: ")
           (let ((new-default-path (project-search-paths-get-default project)))
             (when new-default-path
               (cd new-default-path)
-              (let  ((tags-file (project-append-to-path new-default-path "TAGS")))
+              (when (and (project-search-paths-get project)
+                         (not (project-path-cache-get project)))
+                (project-path-cache-create project))
+              (let ((tags-file (project-tags-file project)))
                 (when (file-exists-p tags-file)
                   (visit-tags-table tags-file))))))
-      (message (concat "That project doesn't exist.")))))
+      (message "That project doesn't exist."))))
 
 (defun project-current nil
   (project-find *project-current*))
@@ -434,9 +431,9 @@ DAdd a search directory to project: ")
   (let ((paths (project-search-paths-get project))
         (matches nil))
     (message "Creating project path-cache...")
-    (while (car paths)
+    (dolist (path paths)
       (project-file-system-traverse :name "x" ; must have at least 1 char, other than that it doesn't matter
-                                    :looking-at (car paths)
+                                    :looking-at path
                                     :test (lambda (a b) t) ; always return t
                                     :match-handler
                                     (lambda (test-result file-path)
@@ -449,8 +446,7 @@ DAdd a search directory to project: ")
                                           (setq regexes (cdr regexes)))
                                         (if add-p
                                             (setq matches (append matches (list file-path)))
-                                          (setq add-p nil)))))
-      (setq paths (cdr paths)))
+                                          (setq add-p nil))))))
     (message (concat "Done creating project path-cache. Cached "
                      (number-to-string (length matches)) " file paths."))
     (project-path-cache-set project matches)))
@@ -482,13 +478,11 @@ DAdd a search directory to project: ")
                                           (test nil)
                                           (match-handler nil))
   (project-ensure-path-cache project)
-  (let ((paths (project-path-cache-get project)))
-    (while (car paths)
-      (let ((file-path (project-path-file-name (car paths))))
-        (let ((test-results (funcall test name file-path)))
-          (when test-results
-            (funcall match-handler test-results (car paths))))
-        (setq paths (cdr paths))))))
+  (dolist (path (project-path-cache-get project))
+    (let* ((file-path (project-path-file-name path))
+           (test-results (funcall test name file-path)))
+      (when test-results
+        (funcall match-handler test-results path)))))
 
 (defun project-search-fuzzy (project file-name &optional tolerance)
   (when (not tolerance)
@@ -561,11 +555,9 @@ DAdd a search directory to project: ")
     (let ((file-path (project-append-to-path parent-dir looking-at)))
       (if (file-directory-p file-path)
           ;; Handle directory
-          (let ((files (directory-files file-path)))
-            (while (car files)
-              (project-file-system-traverse :name name :looking-at (car files) :parent-dir file-path
-                                            :test test :match-handler match-handler)
-              (setq files (cdr files))))
+          (dolist (file (directory-files file-path))
+            (project-file-system-traverse :name name :looking-at file :parent-dir file-path
+                                          :test test :match-handler match-handler))
         ;; Handle file
         (when (and test match-handler)
           (let ((test-results (funcall test name looking-at)))
