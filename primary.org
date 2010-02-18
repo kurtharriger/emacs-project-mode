@@ -1,0 +1,16 @@
+* TODO Saving projects
+** Save projects to .emacs. Use customizations for that.
+* TODO Processing of tags-form not tested for using etags and elisp symbols, but it works when no symbols are specified.
+* TODO Blank input should return silently. Right now it searches
+* TODO From where cursor is
+** Find class def
+** Find function def
+** Full-text search
+** File name search
+** All should be completing if more than one result is found.
+* TODO Refactor a rename:
+** Fuzzy match on word
+** Default to normal word separation plus camel-case word separation.
+** Review refactor
+** Perform refactor
+** Step through matches
