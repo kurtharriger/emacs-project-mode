@@ -492,7 +492,7 @@ DAdd a search directory to project: ")
 
 (defun project-search-fuzzy (project file-name &optional tolerance)
   (when (not tolerance)
-    (setq tolerance project-fuzzy-match-tolerance))
+    (setq tolerance (project-fuzzy-match-tolerance-get project)))
   (let ((matches nil))
     (project-path-cache-traverse :project project
                                  :name file-name
