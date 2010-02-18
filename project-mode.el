@@ -54,7 +54,7 @@
   :keymap
   '(("\C-cpc" . project-new)
     ("\C-cps" . project-choose)
-    ("\C-cpu" . project-view-current)
+    ("\C-cpu" . project-show-current-name)
     ("\C-cpr" . project-refresh)
     ("\C-cpt" . project-tags-refresh)
     ("\C-cppr" . project-path-cache-refresh)
@@ -104,7 +104,7 @@ DAdd a search directory to project: ")
       (let ((choice (completing-read "Select project: " listified-project-list nil nil nil)))
         (project-select choice)))))
 
-(defun project-view-current nil
+(defun project-show-current-name nil
   (interactive)
   (if (project-current)
       (message (concat "Current project: " (project-current-name)))
