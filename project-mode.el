@@ -740,6 +740,142 @@ DAdd a search directory to project: ")
   (when (string-match "[^^]\\.[^.]+$" file-path)
     (substring file-path (string-match "\\.[^.]+$" file-path))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Menu
+
+(defun project-display-menu nil
+  (define-key-after
+    global-map
+    [menu-bar projmenu]
+    (cons "Project" (make-sparse-keymap))
+    'tools)
+
+  ;; Searching
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch]
+    (cons "Search" (make-sparse-keymap)))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch lckyreg]
+    '("I'm feeling lucky regex" . project-im-feeling-lucky-regex))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch lckyfuz]
+    '("I'm feeling lucky fuzzy" . project-im-feeling-lucky-fuzzy))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch mtchonl]
+    '("Open match at point" . project-open-match-on-line))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch srchtpm]
+    '("Full-Text Prev Match" . project-search-text-previous))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch srchtnm]
+    '("Full-Text Next Match" . project-search-text-next))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch srchregex]
+    '("Regex Full-Text" . project-search-text))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch srchregex]
+    '("Regex File Name" . project-search-regex-interactive))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch srchfuz]
+    '("Fuzzy File Name" . project-search-fuzzy-interactive))
+  
+  ;; Refresh
+  (define-key
+    global-map
+    [menu-bar projmenu projref]
+    (cons "Refresh" (make-sparse-keymap)))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projref projtref]
+    '("Refresh Tags" . project-tags-refresh))
+  
+  (define-key
+    global-map
+    [menu-bar projmenu projref projpcref]
+    '("Refresh Path Cache" . project-path-cache-refresh))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projref projrefall]
+    '("Refresh All" . project-refresh))
+
+  ;; Save & Load
+  (define-key
+    global-map
+    [menu-bar projmenu projsvld]
+    (cons "Save or Load" (make-sparse-keymap)))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsvld projloadall]
+    '("Load All" . project-load-all))
+  
+  (define-key
+    global-map
+    [menu-bar projmenu  projsvld projload]
+    '("Load" . project-load-and-select))
+
+  (define-key
+    global-map
+    [menu-bar projmenu  projsvld projsaveall]
+    '("Save All" . project-save-all))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsvld projsave]
+    '("Save" . project-save))
+  
+  ;; Project info
+  (define-key
+    global-map
+    [menu-bar projmenu curproj]
+    (cons "Current" (make-sparse-keymap)))
+
+  (define-key
+    global-map
+    [menu-bar projmenu curproj pvcp]
+    '("View Path Cache" . project-view-path-cache))
+
+  (define-key
+    global-map
+    [menu-bar projmenu curproj pvsp]
+    '("View Search Paths" . project-view-search-paths))
+
+  (define-key
+    global-map
+    [menu-bar projmenu curproj pscn]
+    '("View Name" . project-show-current-name))
+
+  ;; Top
+  (define-key
+    global-map
+    [menu-bar projmenu pc]
+    '("Choose" . project-choose))
+  (define-key
+    global-map
+    [menu-bar projmenu pn]
+    '("New" . project-new)))
+
+(defun project-remove-menu nil
+  (global-unset-key [menu-bar projmenu]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
