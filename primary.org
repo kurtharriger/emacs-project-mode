@@ -1,5 +1,3 @@
-* TODO Saving projects
-** Save projects to .emacs. Use customizations for that.
 * TODO Processing of tags-form not tested for using etags and elisp symbols, but it works when no symbols are specified.
 * TODO Blank input should return silently. Right now it searches
 * TODO From where cursor is

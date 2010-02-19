@@ -38,6 +38,25 @@
   "Precentage. The higher the more tolerant fuzzy matches will be."
   :group 'project)
 
+;; TODO: This feature isn't fully tested, but does seem to work currently.
+(defcustom project-tags-form-default nil
+  "Used to create tags. Useful for when extending project mode.
+The form must be like the following:
+'(\".groovy\"
+  ('elisp \"regex1\"
+          \"regex2\") ; generate tags using elisp
+  \".clj\"
+  ('etags \"-r 'etags regex argument'\"
+          \"-R 'etags regex exclusion'\") ; generate tags using etags
+  \".c\"
+  ('etags)) ; generate using etags language auto-detect
+"
+  :group 'project)
+
+(defcustom project-extension-for-saving ".proj"
+  "Appended to the file name of saved projects."
+  :group 'project)
+
 (define-minor-mode project-mode
   "Toggle project mode.
    With no argument, this command toggles the mode.
@@ -55,6 +74,8 @@
   '(("\C-cpc" . project-new)
     ("\C-cps" . project-choose)
     ("\C-cpu" . project-show-current-name)
+    ("\C-c\C-p\C-s" . project-save)
+    ("\C-c\C-p\C-l" . project-load-and-select)
     ("\C-cpr" . project-refresh)
     ("\C-cpt" . project-tags-refresh)
     ("\C-cppr" . project-path-cache-refresh)
@@ -102,13 +123,25 @@ DAdd a search directory to project: ")
   (when (not project-name)
     (let ((listified-project-list (mapcar (lambda (x) (list x)) *project-list*)))
       (let ((choice (completing-read "Select project: " listified-project-list nil nil nil)))
-        (project-select choice)))))
+        (project-select choice))))
+  (project-select project-name))
+
+(defun project-load-and-select (project-name)
+  (interactive "MLoad project by name: ")
+  (project-load project-name)
+  (project-choose project-name))
 
 (defun project-show-current-name nil
   (interactive)
   (if (project-current)
       (message (concat "Current project: " (project-current-name)))
     (message "No project is currently selected.")))
+
+(defun project-save nil
+  (interactive)
+  (project-ensure-current)
+  (message (concat "Saving project '" (project-current-name) "'"))
+  (project-write (project-current)))
 
 (defun project-im-feeling-lucky-fuzzy (file-name)
   (interactive "MI'm-feeling-lucky FUZZY search: ")
@@ -245,7 +278,8 @@ DAdd a search directory to project: ")
                       nil
                       (project-tags-form-get (project-current)))
   (when (file-exists-p (project-tags-file (project-current)))
-    (visit-tags-table (project-tags-file (project-current)))))
+    (visit-tags-table (project-tags-file (project-current))))
+  (message "Don refreshing tags."))
 
 (defun project-refresh nil
   (interactive)
@@ -268,7 +302,7 @@ DAdd a search directory to project: ")
   (when (and (not append-p)
              (file-exists-p tags-file))
     (with-temp-buffer
-      (write-region (point-min) (point-max) tags-file)))
+      (write-file tags-file)))
   (dolist (file path-cache)
     (let ((tags-form tags-form))
       (while (and (stringp file)
@@ -324,7 +358,8 @@ DAdd a search directory to project: ")
   (project-append-to-path (project-search-paths-get-default project) "TAGS"))
 
 (defun project-tags-form-get (project)
-  (get project 'tags-form))
+  (or (get project 'tags-form)
+      project-tags-form-default))
 
 (defun project-tags-form-set (project value)
   (put project 'tags-form value))
@@ -346,15 +381,55 @@ DAdd a search directory to project: ")
    not already been processed using `TAGS-FORM'."
   (put project 'enable-auto-tags-for-other-file-types value))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Other
+
+(defun project-load (project-name)
+  (message (concat "Loading project from file: " (project-file project-name)))
+  (with-temp-buffer
+    (insert-file-contents (project-file project-name))
+    (goto-char (point-min))
+    (eval (read (current-buffer))))
+  (message (concat "Done loading project from file: " (project-file project-name))))
+
+(defun project-file (project)
+  (let ((project (if (symbolp project)
+                     (project-name project)
+                   project)))
+    (project-append-to-path "~/.emacs.d"
+                            (concat project project-extension-for-saving))))
+
+(defun project-write (project)
+  (let ((data (project-as-data project)))
+    (when data
+      (with-temp-buffer
+        (insert (pp-to-string data))
+        (write-file (project-file project))))))
+
+(defun project-as-data (project)
+  (let ((code '(progn)))
+    (dolist (p *project-list*)
+      (setq
+       code
+       (append
+        code
+        `((let ((project (project-create ,(project-name p))))
+            (project-search-paths-set              project  ',(project-search-paths-get              project))
+            (project-tags-form-set                 project  ',(project-tags-form-get                 project))
+            (project-search-exclusion-regexes-set  project  ',(project-search-exclusion-regexes-get  project))
+            (project-fuzzy-match-tolerance-set     project  ,(project-fuzzy-match-tolerance-get      project)))))))
+    code))
+
 (defun project-search-exclusion-regexes-get (project)
-  (get project 'search-exclusion-regexes))
+  (or (get project 'search-exclusion-regexes)
+      project-search-exclusion-regexes-default))
 
 (defun project-search-exclusion-regexes-set (project value)
   (put project 'search-exclusion-regexes value))
 
 (defun project-fuzzy-match-tolerance-get (project)
-  (get project 'fuzzy-match-tolerance))
+  (or (get project 'fuzzy-match-tolerance)
+      project-fuzzy-match-tolerance-default))
 
 (defun project-fuzzy-match-tolerance-set (project value)
   (put project 'fuzzy-match-tolerance value))
