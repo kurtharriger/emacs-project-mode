@@ -73,28 +73,36 @@ The form must be like the following:
   ;; This mode is best as a global minor mode
   :global t
   ;; The minor mode bindings.
-  ;; TODO: Violation of conventions -- "C-c" is resreved for major modes
+  ;; NOTE: C-c[<control-char> are reserved for modes that extend project-mode.
   :keymap
-  '(("\C-cpc" . project-new)
-    ("\C-cps" . project-choose)
-    ("\C-cpu" . project-show-current-name)
-    ("\C-c\C-p\C-s" . project-save)
-    ("\C-c\C-p\M-s" . project-save-all)
-    ("\C-c\C-p\C-l" . project-load-and-select)
-    ("\C-c\C-p\M-l" . project-load-all)
-    ("\C-cpr" . project-refresh)
-    ("\C-cpt" . project-tags-refresh)
-    ("\C-cppr" . project-path-cache-refresh)
-    ("\C-cppc" . project-view-path-cache)
-    ("\C-cff" . project-search-fuzzy-interactive)
-    ("\C-cfr" . project-search-regex-interactive)
-    ("\C-cft" . project-search-text)
-    ("\C-c\C-ff" . project-im-feeling-lucky-fuzzy)
-    ("\C-c\C-fr" . project-im-feeling-lucky-regex)
-    ("\C-c\C-n" . project-search-text-next)
-    ("\C-c\C-p" . project-search-text-previous)
-    ("\C-c\C-m" . project-open-match-on-line)
-    ("\C-c\C-o" . project-open-file-on-line))
+  '(;; Commands on projects start with:............. 'p'
+    ("\C-c[pn" . project-new)
+    ("\C-c[pc" . project-choose)
+    ("\C-c[pa" . project-show-current-name)
+    ("\C-c[ppcv" . project-view-path-cache)
+    ("\C-c[pspv" . project-view-search-paths)
+    ("\C-c[pspa" . project-add-search-path)
+    ;; Commands for saving start with:.............. 's'
+    ("\C-c[ss" . project-save)
+    ("\C-c[sa" . project-save-all)
+    ;; Commands for loading start with:............. 'l'
+    ("\C-c[ll" . project-load-and-select)
+    ("\C-c[la" . project-load-all)
+    ;; Commands for refreshing start with:.......... 'r'
+    ("\C-c[rr" . project-refresh)
+    ("\C-c[rp" . project-path-cache-refresh)
+    ("\C-c[rt" . project-tags-refresh)
+    ;; Commands for searching/finding start with:... 'f'
+    ("\C-c[ff" . project-search-fuzzy-interactive)
+    ("\C-c[fr" . project-search-regex-interactive)
+    ("\C-c[ft" . project-search-text)
+    ("\C-c[fn" . project-search-text-next)
+    ("\C-c[fp" . project-search-text-previous)
+    ("\C-c[flf" . project-im-feeling-lucky-fuzzy)
+    ("\C-c[flr" . project-im-feeling-lucky-regex)
+    ;; Commands for doing something at point:....... 't'
+    ("\C-c[tm" . project-open-match-on-line)
+    ("\C-c[to" . project-open-file-on-line))
   :group 'project)
 
 ;;;###autoload
@@ -161,6 +169,25 @@ DAdd a search directory to project: ")
   (dolist (project *project-list*)
     (project-write project))
   (message "Done saving all projects."))
+
+(defun project-view-search-paths nil
+  (interactive)
+  (project-ensure-current)
+  (let ((buf (generate-new-buffer (concat "*" (project-current-name) "-search-paths-dump*"))))
+    (pop-to-buffer buf)
+    (pp (project-search-paths-get (project-current)))
+    (dolist (file (project-search-paths-get (project-current)))
+      (insert file "\n"))))
+
+(defun project-search-paths-clear nil
+  (interactive)
+  (project-ensure-current)
+  (project-search-paths-set (project-current) nil))
+
+(defun project-add-search-path (dir)
+  (interactive "DAdd a search directory to project: ")
+  (project-ensure-current)
+  (project-search-paths-add (project-current) dir))
 
 (defun project-im-feeling-lucky-fuzzy (file-name)
   (interactive "MI'm-feeling-lucky FUZZY search: ")

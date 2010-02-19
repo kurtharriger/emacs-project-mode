@@ -1,4 +1,7 @@
-* TODO Modify projects' search-path
+* TODO Option to run all search commands while ignoring path-cache and just looking on disk.
+* TODO File searches should optionally auto-complete as you type or hit tab
+* TODO Show current project in mode line
+** Swich between projects from mode line as well
 * TODO Add "Project" menu to help new users.
 * TODO In search results and path-cache dump files should be clickable links.
 * TODO Processing of tags-form not tested for using etags and elisp symbols, but it works when no symbols are specified.
