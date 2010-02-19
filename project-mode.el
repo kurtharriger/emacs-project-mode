@@ -120,11 +120,11 @@ DAdd a search directory to project: ")
 
 (defun project-choose (&optional project-name)
   (interactive)
-  (when (not project-name)
-    (let ((listified-project-list (mapcar (lambda (x) (list x)) *project-list*)))
-      (let ((choice (completing-read "Select project: " listified-project-list nil nil nil)))
-        (project-select choice))))
-  (project-select project-name))
+  (if (not project-name)
+      (let ((listified-project-list (mapcar (lambda (x) (list x)) *project-list*)))
+        (let ((choice (completing-read "Select project: " listified-project-list nil nil nil)))
+          (project-select choice)))
+    (project-select project-name)))
 
 (defun project-load-and-select (project-name)
   (interactive "MLoad project by name: ")
@@ -407,18 +407,11 @@ DAdd a search directory to project: ")
         (write-file (project-file project))))))
 
 (defun project-as-data (project)
-  (let ((code '(progn)))
-    (dolist (p *project-list*)
-      (setq
-       code
-       (append
-        code
-        `((let ((project (project-create ,(project-name p))))
-            (project-search-paths-set              project  ',(project-search-paths-get              project))
-            (project-tags-form-set                 project  ',(project-tags-form-get                 project))
-            (project-search-exclusion-regexes-set  project  ',(project-search-exclusion-regexes-get  project))
-            (project-fuzzy-match-tolerance-set     project  ,(project-fuzzy-match-tolerance-get      project)))))))
-    code))
+  `((let ((project (project-create ,(project-name project))))
+      (project-search-paths-set              project  ',(project-search-paths-get              project))
+      (project-tags-form-set                 project  ',(project-tags-form-get                 project))
+      (project-search-exclusion-regexes-set  project  ',(project-search-exclusion-regexes-get  project))
+      (project-fuzzy-match-tolerance-set     project  ,(project-fuzzy-match-tolerance-get      project)))))
 
 (defun project-search-exclusion-regexes-get (project)
   (or (get project 'search-exclusion-regexes)
