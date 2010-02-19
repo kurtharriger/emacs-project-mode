@@ -14,3 +14,9 @@
 ** Review refactor
 ** Perform refactor
 ** Step through matches
+* TODO Search within files names matching a regex
+* TODO LOC
+** Total LOC in file names matching regex
+** Total LOC in all files
+** Total LOC in all files matching this list of regex
+*** Consider using a project variable: project-loc-regexes
