@@ -1,3 +1,6 @@
+* TODO Modify projects' search-path
+* TODO Add "Project" menu to help new users.
+* TODO In search results and path-cache dump files should be clickable links.
 * TODO Processing of tags-form not tested for using etags and elisp symbols, but it works when no symbols are specified.
 * TODO Blank input should return silently. Right now it searches
 * TODO From where cursor is
