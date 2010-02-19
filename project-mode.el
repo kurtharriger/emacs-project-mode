@@ -57,6 +57,10 @@ The form must be like the following:
   "Appended to the file name of saved projects."
   :group 'project)
 
+(defcustom project-proj-files-dir "~/.emacs.d"
+  "Where project files are saved."
+  :group 'project)
+
 (define-minor-mode project-mode
   "Toggle project mode.
    With no argument, this command toggles the mode.
@@ -75,7 +79,9 @@ The form must be like the following:
     ("\C-cps" . project-choose)
     ("\C-cpu" . project-show-current-name)
     ("\C-c\C-p\C-s" . project-save)
+    ("\C-c\C-p\M-s" . project-save-all)
     ("\C-c\C-p\C-l" . project-load-and-select)
+    ("\C-c\C-p\M-l" . project-load-all)
     ("\C-cpr" . project-refresh)
     ("\C-cpt" . project-tags-refresh)
     ("\C-cppr" . project-path-cache-refresh)
@@ -131,6 +137,13 @@ DAdd a search directory to project: ")
   (project-load project-name)
   (project-choose project-name))
 
+(defun project-load-all nil
+  (interactive)
+  (dolist (file (directory-files project-proj-files-dir))
+    (when (string-match (concat project-extension-for-saving "$") file)
+      (project-load-file (project-append-to-path project-proj-files-dir file))))
+  (message "Done loading all projects"))
+
 (defun project-show-current-name nil
   (interactive)
   (if (project-current)
@@ -142,6 +155,12 @@ DAdd a search directory to project: ")
   (project-ensure-current)
   (message (concat "Saving project '" (project-current-name) "'"))
   (project-write (project-current)))
+
+(defun project-save-all nil
+  (interactive)
+  (dolist (project *project-list*)
+    (project-write project))
+  (message "Done saving all projects."))
 
 (defun project-im-feeling-lucky-fuzzy (file-name)
   (interactive "MI'm-feeling-lucky FUZZY search: ")
@@ -386,17 +405,20 @@ DAdd a search directory to project: ")
 
 (defun project-load (project-name)
   (message (concat "Loading project from file: " (project-file project-name)))
-  (with-temp-buffer
-    (insert-file-contents (project-file project-name))
-    (goto-char (point-min))
-    (eval (read (current-buffer))))
+  (project-load-file (project-file project-name))
   (message (concat "Done loading project from file: " (project-file project-name))))
+
+(defun project-load-file (project-file)
+  (with-temp-buffer
+    (insert-file-contents project-file)
+    (goto-char (point-min))
+    (eval (read (current-buffer)))))
 
 (defun project-file (project)
   (let ((project (if (symbolp project)
                      (project-name project)
                    project)))
-    (project-append-to-path "~/.emacs.d"
+    (project-append-to-path project-proj-files-dir
                             (concat project project-extension-for-saving))))
 
 (defun project-write (project)
@@ -407,11 +429,12 @@ DAdd a search directory to project: ")
         (write-file (project-file project))))))
 
 (defun project-as-data (project)
-  `((let ((project (project-create ,(project-name project))))
-      (project-search-paths-set              project  ',(project-search-paths-get              project))
-      (project-tags-form-set                 project  ',(project-tags-form-get                 project))
-      (project-search-exclusion-regexes-set  project  ',(project-search-exclusion-regexes-get  project))
-      (project-fuzzy-match-tolerance-set     project  ,(project-fuzzy-match-tolerance-get      project)))))
+  `(progn
+     (let ((project (project-create ,(project-name project))))
+       (project-search-paths-set              project  ',(project-search-paths-get              project))
+       (project-tags-form-set                 project  ',(project-tags-form-get                 project))
+       (project-search-exclusion-regexes-set  project  ',(project-search-exclusion-regexes-get  project))
+       (project-fuzzy-match-tolerance-set     project  ,(project-fuzzy-match-tolerance-get      project)))))
 
 (defun project-search-exclusion-regexes-get (project)
   (or (get project 'search-exclusion-regexes)
