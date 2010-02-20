@@ -7,11 +7,6 @@
 ;;   * Finding files is greatly simplified (see key bindings)
 ;;   * TAGS files for project files.
 ;;
-;; Usage:
-;;     (when (require 'project-mode)
-;;       (let ((project (project-create "foo")))
-;;         (project-search-paths-add project "/usr/home/ben/proj/foo")))
-;;
 
 (require 'cl)
 (require 'levenshtein)
