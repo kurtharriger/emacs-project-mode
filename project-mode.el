@@ -88,6 +88,7 @@ The form must be like the following:
     ("\C-c[rp" . project-path-cache-refresh)
     ("\C-c[rt" . project-tags-refresh)
     ;; Commands for searching/finding start with:... 'f'
+    ("\C-c[fs" . project-search-filesystem-interactive)
     ("\C-c[ff" . project-search-fuzzy-interactive)
     ("\C-c[fr" . project-search-regex-interactive)
     ("\C-c[ft" . project-search-text)
@@ -197,6 +198,15 @@ DAdd a search directory to project: ")
   (let ((best-match (car (project-search-regex (project-current) regex))))
     (when best-match
       (find-file best-match))))
+
+(defun project-search-filesystem-interactive (file-name-regex)
+  (interactive "MFile system REGEX search: ")
+  (project-ensure-current)
+  (let ((matches (project-search-filesystem (project-current) file-name-regex)))
+    (when matches
+      (let ((choice (completing-read "Choose: " matches nil nil nil)))
+        (when choice
+          (find-file choice))))))
 
 (defun project-search-fuzzy-interactive (name)
   (interactive "MFind file FUZZY: ")
@@ -320,7 +330,7 @@ DAdd a search directory to project: ")
                       (project-tags-form-get (project-current)))
   (when (file-exists-p (project-tags-file (project-current)))
     (visit-tags-table (project-tags-file (project-current))))
-  (message "Don refreshing tags."))
+  (message "Done refreshing tags."))
 
 (defun project-refresh nil
   (interactive)
@@ -548,25 +558,24 @@ DAdd a search directory to project: ")
   (symbol-plist project))
 
 (defun project-path-cache-create (project)
-  (let ((paths (project-search-paths-get project))
-        (matches nil))
+  (let ((matches nil))
     (message "Creating project path-cache...")
-    (dolist (path paths)
-      (project-file-system-traverse :name "x" ; must have at least 1 char, other than that it doesn't matter
-                                    :looking-at path
-                                    :test (lambda (a b) t) ; always return t
-                                    :match-handler
-                                    (lambda (test-result file-path)
-                                      (let ((regexes (append (project-search-exclusion-regexes-get project)))
-                                            (add-p t))
-                                        (while (and (car regexes)
-                                                    add-p)
-                                          (when (string-match (car regexes) file-path)
-                                            (setq add-p nil))
-                                          (setq regexes (cdr regexes)))
-                                        (if add-p
-                                            (setq matches (append matches (list file-path)))
-                                          (setq add-p nil))))))
+    (dolist (path (project-search-paths-get project))
+      (project-filesystem-traverse :query nil
+                                   :looking-at path
+                                   :test (lambda (a b) t) ; always return t
+                                   :match-handler
+                                   (lambda (test-result file-path)
+                                     (let ((regexes (append (project-search-exclusion-regexes-get project)))
+                                           (add-p t))
+                                       (while (and (car regexes)
+                                                   add-p)
+                                         (when (string-match (car regexes) file-path)
+                                           (setq add-p nil))
+                                         (setq regexes (cdr regexes)))
+                                       (if add-p
+                                           (setq matches (append matches (list file-path)))
+                                         (setq add-p nil))))))
     (message (concat "Done creating project path-cache. Cached "
                      (number-to-string (length matches)) " file paths."))
     (project-path-cache-set project matches)))
@@ -603,6 +612,17 @@ DAdd a search directory to project: ")
            (test-results (funcall test name file-path)))
       (when test-results
         (funcall match-handler test-results path)))))
+
+(defun project-search-filesystem (project file-name-regex)
+  (let (matches)
+    (dolist (dir (project-search-paths-get project))
+      (project-filesystem-traverse :query file-name-regex
+                                   :looking-at dir
+                                   :test (lambda (query x) (string-match query x))
+                                   :match-handler
+                                   (lambda (test-result file-path)
+                                     (setq matches (append matches (list file-path))))))
+    matches))
 
 (defun project-search-fuzzy (project file-name &optional tolerance)
   (when (not tolerance)
@@ -662,13 +682,12 @@ DAdd a search directory to project: ")
 (defun project-strip-assumed-file-extensions (file)
   (project-strip-file-extensions file project-assumed-file-extensions))
 
-(defun* project-file-system-traverse (&key (name nil)
-                                           (looking-at nil)
-                                           (parent-dir nil)
-                                           (test nil)
-                                           (match-handler nil))
-  (when  (and name looking-at
-              (> (length name) 0)
+(defun* project-filesystem-traverse (&key (query nil)
+                                          (looking-at nil)
+                                          (parent-dir nil)
+                                          (test nil)
+                                          (match-handler nil))
+  (when  (and looking-at
               (> (length looking-at) 0)
               (not (string-equal "." looking-at))
               (not (string-equal ".." looking-at)))
@@ -676,11 +695,11 @@ DAdd a search directory to project: ")
       (if (file-directory-p file-path)
           ;; Handle directory
           (dolist (file (directory-files file-path))
-            (project-file-system-traverse :name name :looking-at file :parent-dir file-path
-                                          :test test :match-handler match-handler))
+            (project-filesystem-traverse :query query :looking-at file :parent-dir file-path
+                                         :test test :match-handler match-handler))
         ;; Handle file
         (when (and test match-handler)
-          (let ((test-results (funcall test name looking-at)))
+          (let ((test-results (funcall test query looking-at)))
             (when test-results
               (funcall match-handler test-results file-path))))))))
 
@@ -778,19 +797,23 @@ DAdd a search directory to project: ")
 
   (define-key
     global-map
-    [menu-bar projmenu projsrch srchregex]
+    [menu-bar projmenu projsrch srchregexft]
     '("Regex Full-Text" . project-search-text))
 
   (define-key
     global-map
-    [menu-bar projmenu projsrch srchregex]
+    [menu-bar projmenu projsrch srchregexfn]
     '("Regex File Name" . project-search-regex-interactive))
 
   (define-key
     global-map
     [menu-bar projmenu projsrch srchfuz]
     '("Fuzzy File Name" . project-search-fuzzy-interactive))
-  
+ 
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch srchfs]
+    '("Regex File Name (filesystem)" . project-search-filesystem-interactive))
   ;; Refresh
   (define-key
     global-map
@@ -851,6 +874,11 @@ DAdd a search directory to project: ")
 
   (define-key
     global-map
+    [menu-bar projmenu curproj pasp]
+    '("Add Search Path" . project-add-search-path))
+
+  (define-key
+    global-map
     [menu-bar projmenu curproj pvsp]
     '("View Search Paths" . project-view-search-paths))
 
@@ -867,7 +895,8 @@ DAdd a search directory to project: ")
   (define-key
     global-map
     [menu-bar projmenu pn]
-    '("New" . project-new)))
+    '("New" . project-new))
+  nil)
 
 (defun project-remove-menu nil
   (global-unset-key [menu-bar projmenu]))
