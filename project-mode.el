@@ -337,7 +337,8 @@ DAdd a search directory to project: ")
   (project-ensure-current)
   (project-path-cache-refresh)
   (when (not (project-disable-auto-tags-get (project-current)))
-    (project-tags-refresh)))
+    (project-tags-refresh))
+  (message (concat "Done refreshing project '" (project-current-name) "'")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
