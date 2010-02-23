@@ -68,7 +68,7 @@ The form must be like the following:
   ;; This mode is best as a global minor mode
   :global t
   ;; The minor mode bindings.
-  ;; NOTE: C-c[<control-char> are reserved for modes that extend project-mode.
+  ;; NOTE: C-c[<control-char>  and C-c[[ are reserved for modes that extend project-mode.
   :keymap
   '(;; Commands on projects start with:............. 'p'
     ("\C-c[pn" . project-new)
