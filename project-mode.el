@@ -56,6 +56,10 @@ The form must be like the following:
   "Where project files are saved."
   :group 'project)
 
+(defcustom project-path-cache-save-p nil
+  "If nil the path-cache of a project will not be saved to the project file."
+  :group 'project)
+
 (define-minor-mode project-mode
   "Toggle project mode.
    With no argument, this command toggles the mode.
@@ -71,34 +75,25 @@ The form must be like the following:
   ;; NOTE: C-c[<control-char>  and C-c[[ are reserved for modes that extend project-mode.
   :keymap
   '(;; Commands on projects start with:............. 'p'
-    ("\C-c[pn" . project-new)
-    ("\C-c[pc" . project-choose)
-    ("\C-c[pa" . project-show-current-name)
-    ("\C-c[ppcv" . project-view-path-cache)
-    ("\C-c[pspv" . project-view-search-paths)
-    ("\C-c[pspa" . project-add-search-path)
-    ;; Commands for saving start with:.............. 's'
-    ("\C-c[ss" . project-save)
-    ("\C-c[sa" . project-save-all)
-    ;; Commands for loading start with:............. 'l'
-    ("\C-c[ll" . project-load-and-select)
-    ("\C-c[la" . project-load-all)
-    ;; Commands for refreshing start with:.......... 'r'
-    ("\C-c[rr" . project-refresh)
-    ("\C-c[rp" . project-path-cache-refresh)
-    ("\C-c[rt" . project-tags-refresh)
-    ;; Commands for searching/finding start with:... 'f'
-    ("\C-c[fs" . project-search-filesystem-interactive)
-    ("\C-c[ff" . project-search-fuzzy-interactive)
-    ("\C-c[fr" . project-search-regex-interactive)
-    ("\C-c[ft" . project-search-text)
-    ("\C-c[fn" . project-search-text-next)
-    ("\C-c[fp" . project-search-text-previous)
-    ("\C-c[flf" . project-im-feeling-lucky-fuzzy)
-    ("\C-c[flr" . project-im-feeling-lucky-regex)
-    ;; Commands for doing something at point:....... 't'
-    ("\C-c[tm" . project-open-match-on-line)
-    ("\C-c[to" . project-open-file-on-line))
+    ("\M-+n" . project-new)
+    ("\M-+c" . project-choose)
+    ("\M-+a" . project-show-current-name)
+    ("\M-+ep" . project-edit-search-paths)
+    ("\M-+ec" . project-edit-path-cache)
+    ("\M-+s" . project-save)
+    ("\M-+\C-s" . project-save-all)
+    ("\M-+l" . project-load-and-select)
+    ([C-f5] . project-refresh)
+    ("\M-+f" . project-search-fuzzy-interactive)
+    ("\M-+x" . project-search-regex-interactive)
+    ("\M-+t" . project-search-text)
+    ([C-f6] . project-search-text-next)
+    ([C-f7] . project-search-text-previous)
+    ("\M-+yf" . project-search-filesystem-interactive)
+    ("\M-+yz" . project-im-feeling-lucky-fuzzy)
+    ("\M-+yx" . project-im-feeling-lucky-regex)
+    ("\M-+m" . project-open-match-on-line)
+    ("\M-+o" . project-open-file-on-line))
   :group 'project)
 
 ;;;###autoload
@@ -113,6 +108,9 @@ The form must be like the following:
 (defvar project-windows-or-msdos-p (or (string-match "^windows.*" (symbol-name system-type))
                                        (string-match "^ms-dos.*" (symbol-name system-type)))
   "Predicate indicating if this `SYSTEM-TYPE' is windows for the purpose of using the correct directory separator.")
+
+(defvar *project-current-path-cache-edit-buffer* nil)
+(defvar *project-current-search-paths-edit-buffer* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -166,19 +164,42 @@ DAdd a search directory to project: ")
     (project-write project))
   (message "Done saving all projects."))
 
-(defun project-view-search-paths nil
+(defun project-edit-search-paths nil
   (interactive)
   (project-ensure-current)
-  (let ((buf (generate-new-buffer (concat "*" (project-current-name) "-search-paths-dump*"))))
-    (pop-to-buffer buf)
-    (pp (project-search-paths-get (project-current)))
-    (dolist (file (project-search-paths-get (project-current)))
-      (insert file "\n"))))
+  (let ((buf-name "*search-paths-edit*"))
+    (when (get-buffer buf-name)
+      (kill-buffer (get-buffer buf-name)))
+    (let ((paths (project-search-paths-get (project-current)))
+          (buf (get-buffer-create buf-name)))
+      (pop-to-buffer buf)
+      (local-set-key "\C-c\C-c" 'project-save-edited-search-paths)
+      (setq *project-current-search-paths-edit-buffer* buf)
+      (dolist (item paths)
+        (goto-char (point-max))
+        (insert (concat "\n" item))))))
 
-(defun project-search-paths-clear nil
+(defun project-save-edited-search-paths nil
   (interactive)
   (project-ensure-current)
-  (project-search-paths-set (project-current) nil))
+  (let ((buf *project-current-search-paths-edit-buffer*)
+        new-paths)
+    (save-excursion
+      (set-buffer buf)
+      (beginning-of-buffer)
+      (let (start end (continue-p t))
+        (while continue-p
+          (setq start (point))
+          (end-of-line)
+          (setq end (point))
+          (let ((line (buffer-substring-no-properties start end)))
+            (when (and line
+                       (> (length line) 0))
+              (setq new-paths (append new-paths (list line)))))
+          (setq continue-p (= 0 (forward-line))))))
+    (message (concat "Saving search-paths to '" (project-current-name) "'"))
+    (project-search-paths-set (project-current) new-paths)
+    (kill-buffer buf)))
 
 (defun project-add-search-path (dir)
   (interactive "DAdd a search directory to project: ")
@@ -304,16 +325,42 @@ DAdd a search directory to project: ")
     (when file-path
       (find-file file-path))))    
 
-(defun project-view-path-cache nil
+(defun project-edit-path-cache nil
   (interactive)
   (project-ensure-current)
-  (let ((cache (project-path-cache-get (project-current)))
-        (buf (generate-new-buffer (concat "*" (project-current-name)
-                                          "-path-cache-dump*"))))
-    (pop-to-buffer buf)
-    (dolist (item cache)
-      (goto-char (point-max))
-      (insert (concat "\n" item)))))
+  (let ((buf-name "*path-cache-edit*"))
+    (when (get-buffer buf-name)
+      (kill-buffer (get-buffer buf-name)))
+    (let ((cache (project-path-cache-get (project-current)))
+          (buf (get-buffer-create buf-name)))
+      (pop-to-buffer buf)
+      (local-set-key "\C-c\C-c" 'project-save-edited-path-cache)
+      (setq *project-current-path-cache-edit-buffer* buf)
+      (dolist (item cache)
+        (goto-char (point-max))
+        (insert (concat "\n" item))))))
+
+(defun project-save-edited-path-cache nil
+  (interactive)
+  (project-ensure-current)
+  (let ((buf *project-current-path-cache-edit-buffer*)
+        new-cache)
+    (save-excursion
+      (set-buffer buf)
+      (beginning-of-buffer)
+      (let (start end (continue-p t))
+        (while continue-p
+          (setq start (point))
+          (end-of-line)
+          (setq end (point))
+          (let ((line (buffer-substring-no-properties start end)))
+            (when (and line
+                       (> (length line) 0))
+              (setq new-cache (append new-cache (list line)))))
+          (setq continue-p (= 0 (forward-line))))))
+    (message (concat "Saving pathe-cache to '" (project-current-name) "'"))
+    (project-path-cache-set (project-current) new-cache)
+    (kill-buffer buf)))
 
 (defun project-path-cache-refresh nil
   (interactive)
@@ -467,7 +514,9 @@ DAdd a search directory to project: ")
        (project-search-paths-set              project  ',(project-search-paths-get              project))
        (project-tags-form-set                 project  ',(project-tags-form-get                 project))
        (project-search-exclusion-regexes-set  project  ',(project-search-exclusion-regexes-get  project))
-       (project-fuzzy-match-tolerance-set     project  ,(project-fuzzy-match-tolerance-get      project)))))
+       (project-fuzzy-match-tolerance-set     project  ,(project-fuzzy-match-tolerance-get      project))
+       ,(when project-path-cache-save-p
+          `(project-path-cache-set            project  ',(project-path-cache-get                project))))))
 
 (defun project-search-exclusion-regexes-get (project)
   (or (get project 'search-exclusion-regexes)
@@ -519,6 +568,10 @@ DAdd a search directory to project: ")
     (if project
         (progn
           (setq *project-current* project)
+          (when *project-current-path-cache-edit-buffer*
+            (kill-buffer *project-current-path-cache-edit-buffer*))
+          (when *project-current-search-paths-edit-buffer*
+            (kill-buffer *project-current-search-paths-edit-buffer*))
           (let ((new-default-path (project-search-paths-get-default project)))
             (when new-default-path
               (cd new-default-path)
@@ -778,6 +831,11 @@ DAdd a search directory to project: ")
 
   (define-key
     global-map
+    [menu-bar projmenu projsrch srchfs]
+    '("Regex File Name (filesystem)" . project-search-filesystem-interactive))
+
+  (define-key
+    global-map
     [menu-bar projmenu projsrch lckyreg]
     '("I'm feeling lucky regex" . project-im-feeling-lucky-regex))
 
@@ -815,11 +873,7 @@ DAdd a search directory to project: ")
     global-map
     [menu-bar projmenu projsrch srchfuz]
     '("Fuzzy File Name" . project-search-fuzzy-interactive))
- 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchfs]
-    '("Regex File Name (filesystem)" . project-search-filesystem-interactive))
+
   ;; Refresh
   (define-key
     global-map
@@ -840,32 +894,6 @@ DAdd a search directory to project: ")
     global-map
     [menu-bar projmenu projref projrefall]
     '("Refresh All" . project-refresh))
-
-  ;; Save & Load
-  (define-key
-    global-map
-    [menu-bar projmenu projsvld]
-    (cons "Save or Load" (make-sparse-keymap)))
-
-  (define-key
-    global-map
-    [menu-bar projmenu projsvld projloadall]
-    '("Load All" . project-load-all))
-  
-  (define-key
-    global-map
-    [menu-bar projmenu  projsvld projload]
-    '("Load" . project-load-and-select))
-
-  (define-key
-    global-map
-    [menu-bar projmenu  projsvld projsaveall]
-    '("Save All" . project-save-all))
-
-  (define-key
-    global-map
-    [menu-bar projmenu projsvld projsave]
-    '("Save" . project-save))
   
   ;; Project info
   (define-key
@@ -876,17 +904,12 @@ DAdd a search directory to project: ")
   (define-key
     global-map
     [menu-bar projmenu curproj pvcp]
-    '("View Path Cache" . project-view-path-cache))
-
-  (define-key
-    global-map
-    [menu-bar projmenu curproj pasp]
-    '("Add Search Path" . project-add-search-path))
+    '("Edit Path Cache" . project-edit-path-cache))
 
   (define-key
     global-map
     [menu-bar projmenu curproj pvsp]
-    '("View Search Paths" . project-view-search-paths))
+    '("Edit Search Paths" . project-edit-search-paths))
 
   (define-key
     global-map
@@ -896,12 +919,34 @@ DAdd a search directory to project: ")
   ;; Top
   (define-key
     global-map
+    [menu-bar projmenu projloadall]
+    '("Load All" . project-load-all))
+  
+  (define-key
+    global-map
+    [menu-bar projmenu  projload]
+    '("Load" . project-load-and-select))
+
+  (define-key
+    global-map
+    [menu-bar projmenu  projsaveall]
+    '("Save All" . project-save-all))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsave]
+    '("Save" . project-save))
+
+  (define-key
+    global-map
     [menu-bar projmenu pc]
     '("Choose" . project-choose))
+
   (define-key
     global-map
     [menu-bar projmenu pn]
     '("New" . project-new))
+
   nil)
 
 (defun project-remove-menu nil
