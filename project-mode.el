@@ -715,14 +715,19 @@ DAdd a search directory to project: ")
 (defun project-path-file-name (path)
   (replace-regexp-in-string ".*[\\\\/]+" "" path))
 
-(defun project-append-to-path (dir-path str)
-  (if (and dir-path str)
-      (concat (project-remove-trailing-dirsep dir-path) "/" str)
-    (if dir-path
-        (project-remove-trailing-dirsep dir-path)
-      (if str
-          (project-remove-trailing-dirsep str)))))
-
+(defun project-append-to-path (dir-path str-or-list)
+  (if (stringp str-or-list)
+      (if (and dir-path str-or-list)
+          (concat (project-remove-trailing-dirsep dir-path) "/" str-or-list)
+        (if dir-path
+            (project-remove-trailing-dirsep dir-path)
+          (if str-or-list
+              (project-remove-trailing-dirsep str-or-list))))
+    (when (listp str-or-list)
+      (let ((retVal dir-path))
+        (dolist (x str-or-list)
+          (setq retVal (project-append-to-path retVal x)))
+        retVal))))
 
 (defun project-fix-dir-separators-in-path-if-windows (path)
   (when project-windows-or-msdos-p
