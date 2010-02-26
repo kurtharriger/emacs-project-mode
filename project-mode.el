@@ -90,8 +90,7 @@ The form must be like the following:
     ([C-f4] . project-search-text-previous)
     ("\M-+yf" . project-filesystem-search)
     ("\M-+yz" . project-im-feeling-lucky-fuzzy)
-    ("\M-+yx" . project-im-feeling-lucky-regex)
-    ("\M-+m" . project-open-match-on-line))
+    ("\M-+yx" . project-im-feeling-lucky-regex))
   :group 'project)
 
 ;;;###autoload
@@ -242,8 +241,9 @@ DAdd a search directory to project: ")
         (project-full-text-search-results-buffer-set (project-current) buf)
         (pop-to-buffer buf)
         (dolist (match matches)
-          (insert (concat "\n" (first match)
-                          ":" (number-to-string (second match)))))
+          (insert-button (concat "\n" (first match)
+                          ":" (number-to-string (second match)))
+                         'action project-file-button-handler))
         (beginning-of-buffer)))))
 
 (defun project-search-text-next nil
@@ -280,13 +280,6 @@ DAdd a search directory to project: ")
           (find-file file)
           (when p
             (goto-char (string-to-number p))))))))
-
-(defun project-open-match-on-line nil
-  (interactive)
-  (beginning-of-line)
-  (push-mark (point) t t)
-  (end-of-line)
-  (project-open-file-for-match-selection))
 
 (defun project-open-file-on-line nil
   "Open a file from the current line of text."
@@ -741,6 +734,19 @@ DAdd a search directory to project: ")
             (when test-results
               (funcall match-handler test-results file-path))))))))
 
+(defun project-file-button-handler (but)
+  "Examines the button lable for the file path and line number.
+   The button label should looke like '/path/foo/bar.txt:29'"
+  (let ((colon-pos (string-match ":[0-9]+" (button-label but))))
+    (let ((file-path (substring (button-label but) 0 colon-pos))
+          (line (string-to-number
+                 (substring (button-label but) (+ 1 colon-pos) (length (button-label but))))))
+      (find-file file-path)
+      (set-buffer (get-file-buffer file-path))
+      (goto-line line)
+      (push-mark (point) t t)
+      (end-of-line))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Utility functions. Function independently.
@@ -827,11 +833,6 @@ DAdd a search directory to project: ")
     global-map
     [menu-bar projmenu projsrch lckyfuz]
     '("I'm feeling lucky fuzzy" . project-im-feeling-lucky-fuzzy))
-
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch mtchonl]
-    '("Open match at point" . project-open-match-on-line))
 
   (define-key
     global-map
