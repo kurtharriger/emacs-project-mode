@@ -453,7 +453,7 @@ DAdd a search directory to project: ")
     (call-process-shell-command cmd-string)))
 
 (defun project-tags-file (project)
-  (project-append-to-path (project-search-paths-get-default project) "TAGS"))
+  (project-append-to-path (project-default-directory project) "TAGS"))
 
 (defun project-tags-form-get (project)
   (or (get project 'tags-form)
@@ -571,7 +571,7 @@ DAdd a search directory to project: ")
             (kill-buffer *project-current-path-cache-edit-buffer*))
           (when *project-current-search-paths-edit-buffer*
             (kill-buffer *project-current-search-paths-edit-buffer*))
-          (let ((new-default-path (project-search-paths-get-default project)))
+          (let ((new-default-path (project-default-directory project)))
             (when new-default-path
               (cd new-default-path)
               (when (and (project-search-paths-get project)
@@ -647,7 +647,7 @@ DAdd a search directory to project: ")
 (defun project-search-paths-get (project)
   (get project 'search-paths))
 
-(defun project-search-paths-get-default (project)
+(defun project-default-directory (project)
   (car (get project 'search-paths)))
 
 (defun project-search-paths-add (project &rest new-paths)
