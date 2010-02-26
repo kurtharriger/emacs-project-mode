@@ -1,3 +1,4 @@
+* TODO Save currently open files and points to restore when project is re-opened.
 * TODO Project menu should show hide with project-mode enable/disable
 * TODO Option to run all search commands while ignoring path-cache and just looking on disk.
 * TODO File searches should optionally auto-complete as you type or hit tab
