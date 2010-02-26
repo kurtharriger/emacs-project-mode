@@ -91,8 +91,7 @@ The form must be like the following:
     ("\M-+yf" . project-search-filesystem-interactive)
     ("\M-+yz" . project-im-feeling-lucky-fuzzy)
     ("\M-+yx" . project-im-feeling-lucky-regex)
-    ("\M-+m" . project-open-match-on-line)
-    ("\M-+o" . project-open-file-on-line))
+    ("\M-+m" . project-open-match-on-line))
   :group 'project)
 
 ;;;###autoload
@@ -163,42 +162,16 @@ DAdd a search directory to project: ")
     (project-write project))
   (message "Done saving all projects."))
 
-(defun project-edit-search-paths nil
+(defun project-file-list-edit-buffer-save nil
   (interactive)
   (project-ensure-current)
-  (let ((buf-name "*search-paths-edit*"))
-    (when (get-buffer buf-name)
-      (kill-buffer (get-buffer buf-name)))
-    (let ((paths (project-search-paths-get (project-current)))
-          (buf (get-buffer-create buf-name)))
-      (pop-to-buffer buf)
-      (local-set-key "\C-c\C-c" 'project-save-edited-search-paths)
-      (setq *project-current-search-paths-edit-buffer* buf)
-      (dolist (item paths)
-        (goto-char (point-max))
-        (insert (concat "\n" item))))))
-
-(defun project-save-edited-search-paths nil
-  (interactive)
-  (project-ensure-current)
-  (let ((buf *project-current-search-paths-edit-buffer*)
-        new-paths)
-    (save-excursion
-      (set-buffer buf)
-      (beginning-of-buffer)
-      (let (start end (continue-p t))
-        (while continue-p
-          (setq start (point))
-          (end-of-line)
-          (setq end (point))
-          (let ((line (buffer-substring-no-properties start end)))
-            (when (and line
-                       (> (length line) 0))
-              (setq new-paths (append new-paths (list line)))))
-          (setq continue-p (= 0 (forward-line))))))
-    (message (concat "Saving search-paths to '" (project-current-name) "'"))
-    (project-search-paths-set (project-current) new-paths)
-    (kill-buffer buf)))
+  (save-excursion
+    (beginning-of-buffer)
+    (let ((buf (current-buffer))
+          (button (next-button (point) t)))
+      (let ((new-paths (project-buffer-lines-to-list buf)))
+        (project-file-list-edit-buffer-save-handler buf new-paths)
+        (kill-buffer buf)))))
 
 (defun project-add-search-path (dir)
   (interactive "DAdd a search directory to project: ")
@@ -316,6 +289,7 @@ DAdd a search directory to project: ")
   (project-open-file-for-match-selection))
 
 (defun project-open-file-on-line nil
+  "Open a file from the current line of text."
   (interactive)
   (beginning-of-line)
   (push-mark (point) t t)
@@ -327,39 +301,14 @@ DAdd a search directory to project: ")
 (defun project-edit-path-cache nil
   (interactive)
   (project-ensure-current)
-  (let ((buf-name "*path-cache-edit*"))
-    (when (get-buffer buf-name)
-      (kill-buffer (get-buffer buf-name)))
-    (let ((cache (project-path-cache-get (project-current)))
-          (buf (get-buffer-create buf-name)))
-      (pop-to-buffer buf)
-      (local-set-key "\C-c\C-c" 'project-save-edited-path-cache)
-      (setq *project-current-path-cache-edit-buffer* buf)
-      (dolist (item cache)
-        (goto-char (point-max))
-        (insert (concat "\n" item))))))
+  (project-create-file-list-edit-buffer (concat "*" (project-current-name) "-edit-path-cache*")
+                                        (project-path-cache-get (project-current))))
 
-(defun project-save-edited-path-cache nil
+(defun project-edit-search-paths nil
   (interactive)
   (project-ensure-current)
-  (let ((buf *project-current-path-cache-edit-buffer*)
-        new-cache)
-    (save-excursion
-      (set-buffer buf)
-      (beginning-of-buffer)
-      (let (start end (continue-p t))
-        (while continue-p
-          (setq start (point))
-          (end-of-line)
-          (setq end (point))
-          (let ((line (buffer-substring-no-properties start end)))
-            (when (and line
-                       (> (length line) 0))
-              (setq new-cache (append new-cache (list line)))))
-          (setq continue-p (= 0 (forward-line))))))
-    (message (concat "Saving pathe-cache to '" (project-current-name) "'"))
-    (project-path-cache-set (project-current) new-cache)
-    (kill-buffer buf)))
+  (project-create-file-list-edit-buffer (concat "*" (project-current-name) "-edit-search-paths*")
+                                        (project-search-paths-get (project-current))))
 
 (defun project-path-cache-refresh nil
   (interactive)
@@ -392,6 +341,42 @@ DAdd a search directory to project: ")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Projects non-interactive functions (for managing multiple projects)
+
+;;; For using 'editing' buffers
+(defun project-create-file-list-edit-buffer (buffer-name files)
+  (when (get-buffer buffer-name)
+    (kill-buffer (get-buffer buffer-name)))
+  (let ((buf (pop-to-buffer buffer-name)))
+    (local-set-key "\C-c\C-c" 'project-file-list-edit-buffer-save)
+    (dolist (file files)
+      (let ((but (insert-button file
+                                'action (lambda (but)
+                                          (find-file-other-window
+                                           (button-label but))))))
+        (insert "\n")))
+    buf))
+
+(defun project-buffer-lines-to-list (buffer)
+  (save-excursion
+    (beginning-of-buffer)
+    (set-buffer buffer)
+    (let (ret-val start end (continue-p t))
+      (while continue-p
+        (setq start (point))
+        (end-of-line)
+        (setq end (point))
+        (let ((line (buffer-substring-no-properties start end)))
+          (when (and line
+                     (> (length line) 0))
+            (setq ret-val (append ret-val (list line)))))
+        (setq continue-p (= 0 (forward-line))))
+      ret-val)))
+
+(defun project-file-list-edit-buffer-save-handler (buffer paths)
+  (if (string-match "path-cache" (buffer-name buffer))
+      (project-path-cache-set (project-current) paths)
+    (when (string-match "search-paths" (buffer-name buffer))
+      (project-search-paths-set (project-current) paths))))
 
 ;;; Tags
 (defun project-write-tags (path-cache tags-file append-p tags-form)
