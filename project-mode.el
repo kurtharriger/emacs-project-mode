@@ -237,13 +237,14 @@ DAdd a search directory to project: ")
                                    (setq matches
                                          (append matches (list (list path p)))))))
     (when matches
-      (let ((buf (generate-new-buffer (concat "*" (project-current-name) "-regex-full-text-search-results*"))))
+      (let ((buf (generate-new-buffer (concat "*" (project-current-name) "-full-text-search-results*"))))
         (project-full-text-search-results-buffer-set (project-current) buf)
         (pop-to-buffer buf)
         (dolist (match matches)
-          (insert-button (concat "\n" (first match)
-                          ":" (number-to-string (second match)))
-                         'action 'project-file-button-handler))
+          (insert-button (concat (first match)
+                                 ":" (number-to-string (second match)))
+                         'action 'project-file-offset-button-handler)
+          (insert "\n"))
         (beginning-of-buffer)))))
 
 (defun project-search-text-next nil
@@ -252,10 +253,10 @@ DAdd a search directory to project: ")
   (let ((buf (project-full-text-search-results-buffer-get (project-current))))
     (when buf
       (set-buffer buf)
-      (forward-line)
       (push-mark (point) t t)
       (end-of-line)
-      (project-open-file-for-match-selection)))
+      (project-open-file-for-match-selection)
+      (forward-line)))
   nil)
 
 (defun project-search-text-previous nil
@@ -734,18 +735,29 @@ DAdd a search directory to project: ")
             (when test-results
               (funcall match-handler test-results file-path))))))))
 
-(defun project-file-button-handler (but)
+(defun project-file-line-button-handler (but)
   "Examines the button lable for the file path and line number.
-   The button label should looke like '/path/foo/bar.txt:29'"
+   The button label should looke like '/path/foo/bar.txt:29'
+   Where '29' is the line number"
   (let ((colon-pos (string-match ":[0-9]+" (button-label but))))
     (let ((file-path (substring (button-label but) 0 colon-pos))
           (line (string-to-number
                  (substring (button-label but) (+ 1 colon-pos) (length (button-label but))))))
       (find-file file-path)
-      (set-buffer (get-file-buffer file-path))
       (goto-line line)
       (push-mark (point) t t)
       (end-of-line))))
+
+(defun project-file-offset-button-handler (but)
+  "Examines the button lable for the file path and offset number.
+   The button label should looke like '/path/foo/bar.txt:825'
+   Where '825' is the offset in the buffer."
+  (let ((colon-pos (string-match ":[0-9]+" (button-label but))))
+    (let ((file-path (substring (button-label but) 0 colon-pos))
+          (offset (string-to-number
+                   (substring (button-label but) (+ 1 colon-pos) (length (button-label but))))))
+      (find-file file-path)
+      (goto-char offset))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
