@@ -83,12 +83,12 @@ The form must be like the following:
     ("\M-+\C-s" . project-save-all)
     ("\M-+l" . project-load-and-select)
     ([C-f5] . project-refresh)
-    ("\M-+f" . project-search-fuzzy-interactive)
-    ("\M-+x" . project-search-regex-interactive)
+    ("\M-+f" . project-fuzzy-search)
+    ("\M-+x" . project-regex-search)
     ("\M-+t" . project-search-text)
     ([C-f3] . project-search-text-next)
     ([C-f4] . project-search-text-previous)
-    ("\M-+yf" . project-search-filesystem-interactive)
+    ("\M-+yf" . project-filesystem-search)
     ("\M-+yz" . project-im-feeling-lucky-fuzzy)
     ("\M-+yx" . project-im-feeling-lucky-regex)
     ("\M-+m" . project-open-match-on-line))
@@ -192,7 +192,7 @@ DAdd a search directory to project: ")
     (when best-match
       (find-file best-match))))
 
-(defun project-search-filesystem-interactive (file-name-regex)
+(defun project-filesystem-search (file-name-regex)
   (interactive "MFile system REGEX search: ")
   (project-ensure-current)
   (let ((matches (project-search-filesystem (project-current) file-name-regex)))
@@ -201,7 +201,7 @@ DAdd a search directory to project: ")
         (when choice
           (find-file choice))))))
 
-(defun project-search-fuzzy-interactive (name)
+(defun project-fuzzy-search (name)
   (interactive "MFind file FUZZY: ")
   (project-ensure-current)
   (let ((matches (project-search-fuzzy (project-current) name)))
@@ -215,7 +215,7 @@ DAdd a search directory to project: ")
                 (find-file choice)))))
       (message "No reasonable matches found."))))
 
-(defun project-search-regex-interactive (regex)
+(defun project-regex-search (regex)
   (interactive "MFind file REGEX: ")
   (project-ensure-current)
   (let ((matches (project-search-regex (project-current) regex)))
@@ -816,7 +816,7 @@ DAdd a search directory to project: ")
   (define-key
     global-map
     [menu-bar projmenu projsrch srchfs]
-    '("Regex File Name (filesystem)" . project-search-filesystem-interactive))
+    '("Regex File Name (filesystem)" . project-filesystem-search))
 
   (define-key
     global-map
@@ -851,12 +851,12 @@ DAdd a search directory to project: ")
   (define-key
     global-map
     [menu-bar projmenu projsrch srchregexfn]
-    '("Regex File Name" . project-search-regex-interactive))
+    '("Regex File Name" . project-regex-search))
 
   (define-key
     global-map
     [menu-bar projmenu projsrch srchfuz]
-    '("Fuzzy File Name" . project-search-fuzzy-interactive))
+    '("Fuzzy File Name" . project-fuzzy-search))
 
   ;; Refresh
   (define-key
