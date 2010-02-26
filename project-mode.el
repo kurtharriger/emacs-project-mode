@@ -243,7 +243,7 @@ DAdd a search directory to project: ")
         (dolist (match matches)
           (insert-button (concat "\n" (first match)
                           ":" (number-to-string (second match)))
-                         'action project-file-button-handler))
+                         'action 'project-file-button-handler))
         (beginning-of-buffer)))))
 
 (defun project-search-text-next nil
