@@ -33,18 +33,19 @@
   "Precentage. The higher the more tolerant fuzzy matches will be."
   :group 'project)
 
-;; TODO: This feature isn't fully tested, but does seem to work currently.
-(defcustom project-tags-form-default nil
+(defcustom project-tags-form-default '(".*" ('etags))
   "Used to create tags. Useful for when extending project mode.
 The form must be like the following:
-'(\".groovy\"
+'(\".groovy$\"
   ('elisp \"regex1\"
-          \"regex2\") ; generate tags using elisp
-  \".clj\"
+          \"regex2\") ; generate tags using elisp ('elisp is the default)
+  \".clj$\"
   ('etags \"-r 'etags regex argument'\"
           \"-R 'etags regex exclusion'\") ; generate tags using etags
-  \".c\"
-  ('etags)) ; generate using etags language auto-detect
+  \".c$\"
+  ('etags) ; generate using etags language auto-detect
+  \".js$\"
+  ('ignore))
 "
   :group 'project)
 
@@ -105,9 +106,6 @@ The form must be like the following:
 (defvar project-windows-or-msdos-p (or (string-match "^windows.*" (symbol-name system-type))
                                        (string-match "^ms-dos.*" (symbol-name system-type)))
   "Predicate indicating if this `SYSTEM-TYPE' is windows for the purpose of using the correct directory separator.")
-
-(defvar *project-current-path-cache-edit-buffer* nil)
-(defvar *project-current-search-paths-edit-buffer* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -379,7 +377,7 @@ DAdd a search directory to project: ")
   (when (and (not append-p)
              (file-exists-p tags-file))
     (with-temp-buffer
-      (write-file tags-file)))
+      (write-file tags-file))) ; truncate tags file
   (dolist (file path-cache)
     (let ((tags-form tags-form))
       (while (and (stringp file)
@@ -387,13 +385,14 @@ DAdd a search directory to project: ")
                   (second tags-form))
         (let ((path-regex (first tags-form))
               (regexes (second tags-form)))
-          (setq tags-form (cddr tags-form)) ;; move ahead 2
+          (setq tags-form (cddr tags-form)) ; move ahead 2
           (when (string-match path-regex file)
             (let ((tag-gen-method (car regexes))
                   (regexes (if (stringp (car regexes))
                                regexes
                              (cdr regexes))))
-              (if (equal 'etags tag-gen-method)
+              (if (and (not (stringp tag-gen-method))
+                       (equal 'etags (second tag-gen-method)))
                   (project-write-tags-for-file-with-etags file tags-file t regexes)
                 (project-write-tags-for-file-with-elisp file tags-file t regexes)))))))))
 
@@ -415,6 +414,7 @@ DAdd a search directory to project: ")
       (let (entries)
         (dolist (regex regexes)
           (goto-char (point-min))
+          (message (concat "REGEX: " regex))
           (while (re-search-forward regex nil t)
             (let (byte-offset line match)
               (setq match (match-string 0))
@@ -426,9 +426,11 @@ DAdd a search directory to project: ")
         entries))))
 
 (defun project-write-tags-for-file-with-etags (input-file tags-file append-p &optional regex-args)
-  (let ((cmd-string (combine-and-quote-strings (list ("etags" (when append-p "-a")
-                                                      "-o" tags-file
-                                                      regex-args)))))
+  (let ((cmd-string (combine-and-quote-strings (append (list "etags" (when append-p "-a")
+                                                             "-o" tags-file
+                                                             input-file)
+                                                       regex-args))))
+    (message cmd-string)
     (call-process-shell-command cmd-string)))
 
 (defun project-tags-file (project)
@@ -546,10 +548,6 @@ DAdd a search directory to project: ")
     (if project
         (progn
           (setq *project-current* project)
-          (when *project-current-path-cache-edit-buffer*
-            (kill-buffer *project-current-path-cache-edit-buffer*))
-          (when *project-current-search-paths-edit-buffer*
-            (kill-buffer *project-current-search-paths-edit-buffer*))
           (let ((new-default-path (project-default-directory project)))
             (when new-default-path
               (cd new-default-path)
