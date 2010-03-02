@@ -20,6 +20,9 @@
   :prefix "project-"
   :group 'programming)
 
+(defcustom project-menu-string "Project"
+  "The string that appears in the menu.")
+
 (defcustom project-search-exclusion-regexes-default '("\\.svn" "\\.jar$" "\\.class$" "\\.exe$" "\\.png$"
                                                       "\\.gif$" "\\.jpg$" "\\.jpeg$" "\\.ico$" "\\.log$"
                                                       "\\.rtf$" "\\.bin$" "\\.tar$" "\\.tgz$" "\\.gz$"
@@ -815,10 +818,11 @@ DAdd a search directory to project: ")
 ;;; Menu
 
 (defun project-display-menu nil
+  (interactive)
   (define-key-after
     global-map
     [menu-bar projmenu]
-    (cons "Project" (make-sparse-keymap))
+    (cons project-menu-string (make-sparse-keymap))
     'tools)
 
   ;; Searching
@@ -876,12 +880,12 @@ DAdd a search directory to project: ")
   (define-key
     global-map
     [menu-bar projmenu projref projtref]
-    '("Refresh Tags" . project-tags-refresh))
+    '("Refresh Project Tags" . project-tags-refresh))
   
   (define-key
     global-map
     [menu-bar projmenu projref projpcref]
-    '("Refresh Path Cache" . project-path-cache-refresh))
+    '("Refresh Project Path Cache" . project-path-cache-refresh))
 
   (define-key
     global-map
@@ -892,57 +896,58 @@ DAdd a search directory to project: ")
   (define-key
     global-map
     [menu-bar projmenu curproj]
-    (cons "Current" (make-sparse-keymap)))
+    (cons "Current Project" (make-sparse-keymap)))
 
   (define-key
     global-map
     [menu-bar projmenu curproj pvcp]
-    '("Edit Path Cache" . project-edit-path-cache))
+    '("Edit Project Path Cache" . project-edit-path-cache))
 
   (define-key
     global-map
     [menu-bar projmenu curproj pvsp]
-    '("Edit Search Paths" . project-edit-search-paths))
+    '("Edit Project Search Paths" . project-edit-search-paths))
 
   (define-key
     global-map
     [menu-bar projmenu curproj pscn]
-    '("View Name" . project-show-current-name))
+    '("View Project Name" . project-show-current-name))
 
   ;; Top
   (define-key
     global-map
     [menu-bar projmenu projloadall]
-    '("Load All" . project-load-all))
+    '("Load All Projects" . project-load-all))
   
   (define-key
     global-map
     [menu-bar projmenu  projload]
-    '("Load" . project-load-and-select))
+    '("Load Project" . project-load-and-select))
 
   (define-key
     global-map
     [menu-bar projmenu  projsaveall]
-    '("Save All" . project-save-all))
+    '("Save All Projects" . project-save-all))
 
   (define-key
     global-map
     [menu-bar projmenu projsave]
-    '("Save" . project-save))
+    '("Save Project" . project-save))
 
   (define-key
     global-map
     [menu-bar projmenu pc]
-    '("Choose" . project-choose))
+    '("Choose Project" . project-choose))
 
   (define-key
     global-map
     [menu-bar projmenu pn]
-    '("New" . project-new))
+    '("New Project" . project-new))
 
   nil)
 
 (defun project-remove-menu nil
+  (interactive)
   (global-unset-key [menu-bar projmenu]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
