@@ -89,6 +89,7 @@ The form must be like the following:
     ([C-f5] . project-refresh)
     ("\M-+f" . project-fuzzy-search)
     ("\M-+x" . project-regex-search)
+    ("\M-+h" . project-exact-search)
     ("\M-+t" . project-search-text)
     ([C-f3] . project-search-text-next)
     ([C-f4] . project-search-text-previous)
@@ -219,6 +220,19 @@ DAdd a search directory to project: ")
   (interactive "MFind file REGEX: ")
   (project-ensure-current)
   (let ((matches (project-search-regex (project-current) regex)))
+    (when matches
+      (if (> (length matches) 1)
+          (progn
+            (setq matches (mapcar (lambda (x) (list x)) matches))
+            (let ((choice (completing-read "Choose: " matches nil nil nil)))
+              (when choice
+                (find-file choice))))
+        (find-file (car matches))))))
+
+(defun project-exact-search (file-name)
+  (interactive "MFind file EXACT: ")
+  (project-ensure-current)
+  (let ((matches (project-search-exact (project-current) file-name)))
     (when matches
       (if (> (length matches) 1)
           (progn
@@ -693,6 +707,16 @@ DAdd a search directory to project: ")
                             t
                           nil)))))))
 
+(defun* project-search-exact (project file-name)
+  (let ((matches nil))
+    (project-path-cache-traverse :project project
+                                 :name file-name
+                                 :test (lambda (file-name x) (string-equal file-name x))
+                                 :match-handler
+                                 (lambda (test-result file-path)
+                                   (setq matches (append matches (list file-path)))))
+    matches))
+
 (defun project-full-text-search-results-buffer-get (project)
   (get (project-current) 'project-full-text-search-results-buffer))
 
@@ -860,6 +884,11 @@ DAdd a search directory to project: ")
     global-map
     [menu-bar projmenu projsrch srchregexft]
     '("Regex Full-Text" . project-search-text))
+
+  (define-key
+    global-map
+    [menu-bar projmenu projsrch srchexactfn]
+    '("File Name Exact" . project-exact-search))
 
   (define-key
     global-map
