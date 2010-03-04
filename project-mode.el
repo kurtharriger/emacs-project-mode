@@ -79,17 +79,17 @@ The form must be like the following:
   :keymap
   '(;; Commands on projects start with:............. 'p'
     ("\M-+n" . project-new)
-    ("\M-+c" . project-choose)
+    ("\M-+o" . project-open)
     ("\M-+a" . project-show-current-name)
-    ("\M-+ep" . project-edit-search-paths)
-    ("\M-+ec" . project-edit-path-cache)
+    ("\M-+p" . project-edit-search-paths)
+    ("\M-+c" . project-edit-path-cache)
     ("\M-+s" . project-save)
     ("\M-+\C-s" . project-save-all)
     ("\M-+l" . project-load-and-select)
     ([C-f5] . project-refresh)
     ("\M-+f" . project-fuzzy-search)
     ("\M-+x" . project-regex-search)
-    ("\M-+h" . project-exact-search)
+    ("\M-+e" . project-exact-search)
     ("\M-+t" . project-search-text)
     ([C-f3] . project-search-text-next)
     ([C-f4] . project-search-text-previous)
@@ -125,7 +125,7 @@ DAdd a search directory to project: ")
     (project-search-paths-add project search-path)
     (project-refresh)))
 
-(defun project-choose (&optional project-name)
+(defun project-open (&optional project-name)
   (interactive)
   (if (not project-name)
       (let ((listified-project-list (mapcar (lambda (x) (list x)) *project-list*)))
@@ -136,7 +136,7 @@ DAdd a search directory to project: ")
 (defun project-load-and-select (project-name)
   (interactive "MLoad project by name: ")
   (project-load project-name)
-  (project-choose project-name))
+  (project-open project-name))
 
 (defun project-load-all nil
   (interactive)
@@ -888,7 +888,7 @@ DAdd a search directory to project: ")
   (define-key
     global-map
     [menu-bar projmenu projsrch srchexactfn]
-    '("File Name Exact" . project-exact-search))
+    '("Exact File Name" . project-exact-search))
 
   (define-key
     global-map
@@ -965,12 +965,12 @@ DAdd a search directory to project: ")
 
   (define-key
     global-map
-    [menu-bar projmenu pc]
-    '("Choose Project" . project-choose))
+    [menu-bar projmenu projopen]
+    '("Open Project" . project-open))
 
   (define-key
     global-map
-    [menu-bar projmenu pn]
+    [menu-bar projmenu projnew]
     '("New Project" . project-new))
 
   nil)
