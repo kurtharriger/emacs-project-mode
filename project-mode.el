@@ -98,6 +98,10 @@ The form must be like the following:
     ("\M-+yx" . project-im-feeling-lucky-regex))
   :group 'project)
 
+;;; Hooks
+(add-hook 'project-mode-hook 'project-mode-menu)
+(add-hook 'emacs-startup-hook (lambda nil (run-hooks 'project-mode-hook)))
+
 ;;;###autoload
 
 (defvar *project-current* nil
@@ -841,143 +845,142 @@ DAdd a search directory to project: ")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Menu
 
-(defun project-display-menu nil
+(defun project-mode-menu nil
   (interactive)
-  (define-key-after
-    global-map
-    [menu-bar projmenu]
-    (cons project-menu-string (make-sparse-keymap))
-    'tools)
+  (if (not project-mode)
+      (global-unset-key [menu-bar projmenu])
+    (progn
+      (define-key-after
+        global-map
+        [menu-bar projmenu]
+        (cons project-menu-string (make-sparse-keymap))
+        'tools)
 
-  ;; Searching
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch]
-    (cons "Search" (make-sparse-keymap)))
+      ;; Searching
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch]
+        (cons "Search" (make-sparse-keymap)))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchfs]
-    '("Regex File Name (filesystem)" . project-filesystem-search))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch srchfs]
+        '("Regex File Name (filesystem)" . project-filesystem-search))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch lckyreg]
-    '("I'm feeling lucky regex" . project-im-feeling-lucky-regex))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch lckyreg]
+        '("I'm feeling lucky regex" . project-im-feeling-lucky-regex))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch lckyfuz]
-    '("I'm feeling lucky fuzzy" . project-im-feeling-lucky-fuzzy))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch lckyfuz]
+        '("I'm feeling lucky fuzzy" . project-im-feeling-lucky-fuzzy))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchtpm]
-    '("Full-Text Prev Match" . project-search-text-previous))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch srchtpm]
+        '("Full-Text Prev Match" . project-search-text-previous))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchtnm]
-    '("Full-Text Next Match" . project-search-text-next))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch srchtnm]
+        '("Full-Text Next Match" . project-search-text-next))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchregexft]
-    '("Regex Full-Text" . project-search-text))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch srchregexft]
+        '("Regex Full-Text" . project-search-text))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchexactfn]
-    '("Exact File Name" . project-exact-search))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch srchexactfn]
+        '("Exact File Name" . project-exact-search))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchregexfn]
-    '("Regex File Name" . project-regex-search))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch srchregexfn]
+        '("Regex File Name" . project-regex-search))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsrch srchfuz]
-    '("Fuzzy File Name" . project-fuzzy-search))
+      (define-key
+        global-map
+        [menu-bar projmenu projsrch srchfuz]
+        '("Fuzzy File Name" . project-fuzzy-search))
 
-  ;; Refresh
-  (define-key
-    global-map
-    [menu-bar projmenu projref]
-    (cons "Refresh" (make-sparse-keymap)))
+      ;; Refresh
+      (define-key
+        global-map
+        [menu-bar projmenu projref]
+        (cons "Refresh" (make-sparse-keymap)))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projref projtref]
-    '("Refresh Project Tags" . project-tags-refresh))
-  
-  (define-key
-    global-map
-    [menu-bar projmenu projref projpcref]
-    '("Refresh Project Path Cache" . project-path-cache-refresh))
+      (define-key
+        global-map
+        [menu-bar projmenu projref projtref]
+        '("Refresh Project Tags" . project-tags-refresh))
+      
+      (define-key
+        global-map
+        [menu-bar projmenu projref projpcref]
+        '("Refresh Project Path Cache" . project-path-cache-refresh))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projref projrefall]
-    '("Refresh All" . project-refresh))
-  
-  ;; Project info
-  (define-key
-    global-map
-    [menu-bar projmenu curproj]
-    (cons "Current Project" (make-sparse-keymap)))
+      (define-key
+        global-map
+        [menu-bar projmenu projref projrefall]
+        '("Refresh All" . project-refresh))
+      
+      ;; Project info
+      (define-key
+        global-map
+        [menu-bar projmenu curproj]
+        (cons "Current Project" (make-sparse-keymap)))
 
-  (define-key
-    global-map
-    [menu-bar projmenu curproj pvcp]
-    '("Edit Project Path Cache" . project-edit-path-cache))
+      (define-key
+        global-map
+        [menu-bar projmenu curproj pvcp]
+        '("Edit Project Path Cache" . project-edit-path-cache))
 
-  (define-key
-    global-map
-    [menu-bar projmenu curproj pvsp]
-    '("Edit Project Search Paths" . project-edit-search-paths))
+      (define-key
+        global-map
+        [menu-bar projmenu curproj pvsp]
+        '("Edit Project Search Paths" . project-edit-search-paths))
 
-  (define-key
-    global-map
-    [menu-bar projmenu curproj pscn]
-    '("View Project Name" . project-show-current-name))
+      (define-key
+        global-map
+        [menu-bar projmenu curproj pscn]
+        '("View Project Name" . project-show-current-name))
 
-  ;; Top
-  (define-key
-    global-map
-    [menu-bar projmenu projloadall]
-    '("Load All Projects" . project-load-all))
-  
-  (define-key
-    global-map
-    [menu-bar projmenu  projload]
-    '("Load Project" . project-load-and-select))
+      ;; Top
+      (define-key
+        global-map
+        [menu-bar projmenu projloadall]
+        '("Load All Projects" . project-load-all))
+      
+      (define-key
+        global-map
+        [menu-bar projmenu  projload]
+        '("Load Project" . project-load-and-select))
 
-  (define-key
-    global-map
-    [menu-bar projmenu  projsaveall]
-    '("Save All Projects" . project-save-all))
+      (define-key
+        global-map
+        [menu-bar projmenu  projsaveall]
+        '("Save All Projects" . project-save-all))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projsave]
-    '("Save Project" . project-save))
+      (define-key
+        global-map
+        [menu-bar projmenu projsave]
+        '("Save Project" . project-save))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projopen]
-    '("Open Project" . project-open))
+      (define-key
+        global-map
+        [menu-bar projmenu projopen]
+        '("Open Project" . project-open))
 
-  (define-key
-    global-map
-    [menu-bar projmenu projnew]
-    '("New Project" . project-new))
+      (define-key
+        global-map
+        [menu-bar projmenu projnew]
+        '("New Project" . project-new))))
 
   nil)
-
-(defun project-remove-menu nil
-  (interactive)
-  (global-unset-key [menu-bar projmenu]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
