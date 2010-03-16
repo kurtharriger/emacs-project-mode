@@ -479,6 +479,12 @@ DAdd a search directory to project: ")
    not already been processed using `TAGS-FORM'."
   (put project 'enable-auto-tags-for-other-file-types value))
 
+(defun project-put (project sym val)
+  (put project sym val))
+
+(defun project-get (project sym)
+  (get project sym))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Other
 
@@ -841,6 +847,9 @@ DAdd a search directory to project: ")
 (defun project-file-get-extension (file-path)
   (when (string-match "[^^]\\.[^.]+$" file-path)
     (substring file-path (string-match "\\.[^.]+$" file-path))))
+
+(defun project-buffer-name-without-<x> nil
+  (substring (buffer-name) 0 (string-match "\\(<[0-9]+>\\|$\\)" (buffer-name))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Menu
