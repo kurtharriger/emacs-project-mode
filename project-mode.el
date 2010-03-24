@@ -32,7 +32,7 @@
   "File paths that match these regexes will be excluded from any type of search"
   :group 'project)
 
-(defcustom project-fuzzy-match-tolerance-default 50
+(defcustom project-fuzzy-match-tolerance-default 25
   "Precentage. The higher the more tolerant fuzzy matches will be."
   :group 'project)
 
