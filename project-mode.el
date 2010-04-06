@@ -352,9 +352,6 @@ DAdd a search directory to project: ")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Non-interactive functions
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Projects non-interactive functions (for managing multiple projects)
-
 ;;; For using 'editing' buffers
 (defun project-create-file-list-edit-buffer (buffer-name files)
   (when (get-buffer buffer-name)
@@ -547,14 +544,16 @@ DAdd a search directory to project: ")
       (project-path-cache-create project))))
 
 (defun project-run-regex-on-file (file regex match-handler)
-  (with-temp-buffer
-    (insert-file-contents file)
-    (goto-char (point-min))
-    (let ((p nil))
-      (while (condition-case nil
-                 (setq p (re-search-forward regex))
-               (error nil))
-        (funcall match-handler p)))))
+  (if (file-exists-p file)
+      (with-temp-buffer
+        (insert-file-contents file)
+        (goto-char (point-min))
+        (let ((p nil))
+          (while (condition-case nil
+                     (setq p (re-search-forward regex))
+                   (error nil))
+            (funcall match-handler p))))
+    (message (concat file " exists in project path-cache but not on file system."))))
 
 (defun project-find (project)
   "If project found return it, else nil.
