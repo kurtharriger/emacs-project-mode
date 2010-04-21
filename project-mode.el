@@ -417,7 +417,7 @@ DAdd a search directory to project: ")
 (defun project-write-tags-for-file-with-elisp (input-file tags-file append-p regexes)
   (let ((tags (project-generate-tags-for-file-with-elisp input-file regexes)))
     (when tags
-      (let ((data (mapconcat (lambda (x) x) tags "\n")))
+      (let ((data (mapconcat 'identity tags "\n")))
         (with-temp-buffer
           (insert "\n"
                   input-file "," (number-to-string (length data)) "\n"
