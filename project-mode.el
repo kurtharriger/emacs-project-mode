@@ -803,6 +803,10 @@ DAdd a search directory to project: ")
   (replace-regexp-in-string ".*[\\\\/]+" "" path))
 
 (defun project-append-to-path (dir-path str-or-list)
+  (when dir-path
+    (setq dir-path (if (listp dir-path)
+                       (mapconcat 'identity dir-path "/")
+                     dir-path)))
   (if (stringp str-or-list)
       (if (and dir-path str-or-list)
           (concat (project-remove-trailing-dirsep dir-path) "/" str-or-list)
@@ -849,6 +853,32 @@ DAdd a search directory to project: ")
 
 (defun project-buffer-name-without-<x> nil
   (substring (buffer-name) 0 (string-match "\\(<[0-9]+>\\|$\\)" (buffer-name))))
+
+(defun project-path-as-list (file-or-dir)
+  (split-string file-or-dir "[/\\\\]"))
+
+(defun project-list-as-path (l)
+  (mapconcat 'identity l "/"))
+
+(defun project-find-dir-with-dir-for-file (file-name parent-dir-name)
+  (let ((parts (project-path-as-list file-name)))
+    (block nil
+      (while (setq parts (butlast parts))
+        (let ((dir (project-append-to-path parts parent-dir-name)))
+          (when (file-exists-p dir)
+            (return (project-list-as-path parts))))))))
+
+(defun project-dir-in-file-path-p (file-name dir-name)
+  (let ((parts (project-path-as-list file-name)))
+    (block nil
+      (dolist (part parts)
+        (when (equal part dir-name)
+          (return t))))))
+
+(defun project-file-basename (path)
+  (substring path
+             (string-match "[^/\\\\]+$" path)
+             (length path)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Menu
