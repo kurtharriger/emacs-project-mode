@@ -28,7 +28,7 @@
                                                       "\\.rtf$" "\\.bin$" "\\.tar$" "\\.tgz$" "\\.gz$"
                                                       "\\.bz2$" "\\.zip$" "\\.rar$" "\\.cab$" "\\.msi$"
                                                       "\\.o$" "\\.a$" "\\.dll$" "\\.pdf$" "\\.tmp$"
-                                                      "\\bTAGS\\b")
+                                                      "\\.war$" "\\bTAGS\\b")
   "File paths that match these regexes will be excluded from any type of search"
   :group 'project)
 
@@ -272,10 +272,12 @@ DAdd a search directory to project: ")
   (let ((buf (project-full-text-search-results-buffer-get (project-current))))
     (when buf
       (set-buffer buf)
+      (if (not (= (point) (point-min)))
+          (forward-line)
+        (beginning-of-line))
       (push-mark (point) t t)
       (end-of-line)
-      (project-open-file-for-match-selection)
-      (forward-line)))
+      (project-open-file-for-match-selection)))
   nil)
 
 (defun project-search-text-previous nil
@@ -617,9 +619,8 @@ DAdd a search directory to project: ")
     (dolist (path (project-search-paths-get project))
       (project-filesystem-traverse :query nil
                                    :looking-at path
-                                   :test (lambda (a b) t) ; always return t
-                                   :match-handler
-                                   (lambda (test-result file-path)
+                                   :test
+                                   (lambda (query file-path)
                                      (let ((regexes (append (project-search-exclusion-regexes-get project)))
                                            (add-p t))
                                        (while (and (car regexes)
@@ -627,9 +628,12 @@ DAdd a search directory to project: ")
                                          (when (string-match (car regexes) file-path)
                                            (setq add-p nil))
                                          (setq regexes (cdr regexes)))
-                                       (if add-p
-                                           (setq matches (append matches (list file-path)))
-                                         (setq add-p nil))))))
+                                       add-p))
+                                   :match-handler
+                                   (lambda (add-p file-path)
+                                     (if add-p
+                                         (setq matches (append matches (list file-path)))
+                                       (setq add-p nil)))))
     (message (concat "Done creating project path-cache. Cached "
                      (number-to-string (length matches)) " file paths."))
     (project-path-cache-set project matches)))
@@ -758,9 +762,10 @@ DAdd a search directory to project: ")
     (let ((file-path (project-append-to-path parent-dir looking-at)))
       (if (file-directory-p file-path)
           ;; Handle directory
-          (dolist (file (directory-files file-path))
-            (project-filesystem-traverse :query query :looking-at file :parent-dir file-path
-                                         :test test :match-handler match-handler))
+          (when (funcall test query file-path)
+            (dolist (file (directory-files file-path))
+              (project-filesystem-traverse :query query :looking-at file :parent-dir file-path
+                                           :test test :match-handler match-handler)))
         ;; Handle file
         (when (and test match-handler)
           (let ((test-results (funcall test query looking-at)))
