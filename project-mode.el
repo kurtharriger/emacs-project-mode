@@ -9,7 +9,7 @@
 ;;
 
 (require 'cl)
-(require 'levenshtein)
+(require 'liquid-metal)
 
 (defgroup project-mode nil
   "Project mode allows users to do fuzzy and regex searches on
@@ -830,11 +830,7 @@ DAdd a search directory to project: ")
     (replace-regexp-in-string "\\\\" "/" path)))
 
 (defun project-fuzzy-distance-pct (str1 str2)
-  (let ((distance (levenshtein-distance str1 str2)))
-    (/ (* distance 100)
-       (length (if (< (length str1) (length str2))
-                   str1
-                 str2)))))
+  (- 100 (liquid-metal str2 str1))) ;; Swapped, the first string is the abbreviation
 
 (defun project-strip-file-extensions (file-path extensions-regex-list)
   (let ((new-file-path file-path))
